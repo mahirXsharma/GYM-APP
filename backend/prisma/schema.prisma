@@ -12,3 +12,37 @@ datasource db {
   provider = "postgresql"
 }
 
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+  WAITING_LIST
+  ATTENDED
+  NO_SHOW
+}
+
+model User {
+  id       Int       @id @default(autoincrement())
+  name     String
+  email    String    @unique
+  password String
+  bookings Booking[]
+  isAdmin  Boolean   @default(false)
+}
+
+model Session {
+  id           Int       @id @default(autoincrement())
+  scheduledFor DateTime  @unique
+  capacity     Int       @default(20)
+  bookings     Booking[]
+}
+
+model Booking {
+  id        Int           @id @default(autoincrement())
+  createdAt DateTime      @default(now())
+  userId    Int
+  sessionId Int
+  user      User          @relation(fields: [userId], references: [id])
+  session   Session       @relation(fields: [sessionId], references: [id])
+  status    BookingStatus @default(CONFIRMED)
+  code      String        @unique
+}
