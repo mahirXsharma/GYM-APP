@@ -36,6 +36,7 @@ export const signup = async (req: Request, res: Response) => {
         id: User.id,
         name: User.name,
         email: User.email,
+        isAdmin:User.isAdmin
       },
       process.env.JWT_SECRET!,
       {
@@ -88,6 +89,7 @@ export const login = async (req: Request, res: Response) => {
         id: user.id,
         name: user.name,
         email: user.email,
+        isAdmin:user.isAdmin
       },
       process.env.JWT_SECRET!,
       {
@@ -102,6 +104,7 @@ export const login = async (req: Request, res: Response) => {
         id: user.id,
         name: user.name,
         email: user.email,
+        isAdmin:user.isAdmin
       },
     });
   } catch (error) {
