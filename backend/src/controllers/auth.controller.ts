@@ -2,13 +2,16 @@ import type { Request, Response } from "express";
 import { prisma } from "../lib/prisma.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { signupSchema, loginSchema } from "../validators/auth.validators.js";
 
 export const signup = async (req: Request, res: Response) => {
   try {
-    const { name, email, password } = req.body;
-    if (!name || !email || !password) {
-      return res.status(400).json({ error: "All fields are required" });
+    const parsed = signupSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: parsed.error.issues[0]?.message });
     }
+
+    const { name, email, password } = parsed.data;
     const user = await prisma.user.findUnique({
       where: {
         email,
@@ -58,10 +61,12 @@ export const signup = async (req: Request, res: Response) => {
 
 export const login = async (req: Request, res: Response) => {
   try {
-    const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ error: "All fields are required" });
+    const parsed = loginSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: parsed.error.issues[0]?.message });
     }
+
+    const { email, password } = parsed.data;
 
     const user = await prisma.user.findUnique({
       where: {

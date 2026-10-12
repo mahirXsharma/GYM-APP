@@ -6,4 +6,5 @@ const router = Router();
 
 router.post('/', authMiddleware, createSession);
 
+
 export default router;
