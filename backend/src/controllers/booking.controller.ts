@@ -49,7 +49,7 @@ export const createBooking = async (req: Request, res: Response) => {
         if (seatsRemaining <= 0) {
             // wether is it already in the waiting list or not 
             const isAlreadyInWaitingList = await prisma.booking.findFirst({
-                where :{
+                where: {
                     userId,
                     sessionId,
                     status: "WAITING_LIST",
@@ -63,10 +63,10 @@ export const createBooking = async (req: Request, res: Response) => {
                     userId,
                     sessionId,
                     status: "WAITING_LIST",
-                    code : null
+                    code: null
                 }
             });
-            const{code, ...w} = waitlistBooking;
+            const { code, ...w } = waitlistBooking;
             return res.status(200).json({
                 message: "Session is full. You've been added to the waiting list.",
                 booking: w,
@@ -142,7 +142,9 @@ export const cancelBooking = async (req: Request, res: Response) => {
             where: {
                 id: bookingId,
                 userId,
-                status: "CONFIRMED"
+                status: {
+                    in: ["CONFIRMED", "WAITING_LIST"]
+                }
             },
             include: { session: true }
         });
@@ -150,15 +152,44 @@ export const cancelBooking = async (req: Request, res: Response) => {
         if (!booking) {
             return res.status(404).json({ message: "Booking not found" });
         }
+        if (booking.status == "WAITING_LIST") {
+            const waiting = await prisma.booking.delete({
+                where: { id: bookingId },
+            })
+            const { code, ...w } = waiting
+            return res.status(200).json({ message: "You are Removed From Waiting List", waiting: w });
+
+        }
 
         if (booking.session.scheduledFor < new Date()) {
             return res.status(400).json({ message: "Cannot cancel a past session" });
         }
 
-        const cancelled = await prisma.booking.update({
-            where: { id: bookingId },
-            data: { status: "CANCELLED" }
-        });
+        const { cancelled } = await prisma.$transaction(async (tx) => {
+            const cancelled = await tx.booking.update({
+                where: { id: bookingId },
+                data: { status: "CANCELLED" }
+            });
+            // sessionId and status is waiting -> if someone with sessionn id is in watiting list -> promote them
+            const waiting = await tx.booking.findFirst({
+                where: {
+                    sessionId: booking.sessionId,
+                    status: "WAITING_LIST"
+                },
+                orderBy: { createdAt: "asc" }
+            })
+            if (waiting) {
+                await tx.booking.update({
+                    where: { id: waiting.id },
+                    data: {
+                        status: "CONFIRMED",
+                        code: crypto.randomUUID().slice(0, 8).toUpperCase()
+                    },
+                })
+            }
+            return { cancelled }
+        })
+
 
         return res.status(200).json({ message: "Booking cancelled", booking: cancelled });
     } catch (error) {
