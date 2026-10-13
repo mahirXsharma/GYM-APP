@@ -111,6 +111,8 @@ export const createBooking = async (req: Request, res: Response) => {
 
 export const getBookings = async (req: Request, res: Response) => {
     const userId = req.user?.id;
+    const isActive = req.query?.active === "true";
+
     if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
     }
@@ -118,7 +120,18 @@ export const getBookings = async (req: Request, res: Response) => {
 
     try {
         const bookings = await prisma.booking.findMany({
-            where: showAll ? {} : { userId },
+            where: {
+                AND: [
+                    showAll ? {} : { userId },
+                    isActive ? {
+                        status: {
+                            in: ["CONFIRMED", "WAITING_LIST"]
+                        }
+                    } : {},
+
+                ]
+            },
+
             orderBy: { createdAt: "desc" },
             include: { session: true }
 
@@ -170,7 +183,11 @@ export const cancelBooking = async (req: Request, res: Response) => {
                 where: { id: bookingId },
                 data: { status: "CANCELLED" }
             });
-            // sessionId and status is waiting -> if someone with sessionn id is in watiting list -> promote them
+
+            if (booking.session.scheduledFor < new Date()) {
+                return { cancelled };
+            }
+
             const waiting = await tx.booking.findFirst({
                 where: {
                     sessionId: booking.sessionId,
@@ -178,6 +195,7 @@ export const cancelBooking = async (req: Request, res: Response) => {
                 },
                 orderBy: { createdAt: "asc" }
             })
+
             if (waiting) {
                 await tx.booking.update({
                     where: { id: waiting.id },
@@ -196,4 +214,48 @@ export const cancelBooking = async (req: Request, res: Response) => {
         console.error("Cancel booking error:", error);
         return res.status(500).json({ error: "Internal server error" });
     }
+}
+
+export const markAttendance = async (req: Request, res: Response) => {
+    const isAdmin = req.user?.isAdmin;
+    const code = req.body?.code;
+    if (!isAdmin) {
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+    if (!code) {
+        return res.status(400).json({ error: "Please Enter a Valid Code" });
+    }
+
+    const booking = await prisma.booking.findFirst({
+        where: {
+            code,
+            status: "CONFIRMED"
+        },
+        include: {
+            session: true
+        }
+    })
+
+    if (!booking) {
+        return res.status(404).json({ message: "Booking not found" });
+    }
+
+    const now = new Date();
+    const sessionStart = new Date(booking.session.scheduledFor);
+    const sessionEnd = new Date(sessionStart.getTime());
+    sessionEnd.setHours(sessionEnd.getHours() + 1); // 1 hour duration
+
+    if (now <= sessionStart || now >= sessionEnd) {
+        return res.status(400).json({
+            error: "Check-in is only allowed during the session's active hour."
+        });
+    }
+
+    const updatedBooking = await prisma.booking.update({
+        where: { id: booking.id },
+        data: {
+            status: "ATTENDED"
+        }
+    })
+    return res.status(200).json({ message: "Attendance marked successfully", booking: updatedBooking });
 }
