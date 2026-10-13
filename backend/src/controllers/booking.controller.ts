@@ -74,10 +74,11 @@ export const createBooking = async (req: Request, res: Response) => {
             return { booking: createdBooking, session: txSession };
         });
 
+        const { capacity, _count } = verifiedSession;
         return res.status(201).json({
-            message: "Session booked successfully",
-            session: verifiedSession,
-            booking: newBooking
+            message: "Session booked successfullyy",
+            booking: newBooking,
+            seatsRemaining: capacity - _count.bookings - 1
         });
     } catch (error) {
         console.error("Create booking error:", error);
@@ -86,5 +87,23 @@ export const createBooking = async (req: Request, res: Response) => {
 };
 
 export const getBookings = async (req: Request, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+    const showAll = req.user?.isAdmin ?? false;
 
+    try {
+        const bookings = await prisma.booking.findMany({
+            where: showAll ? {} : { userId },
+            orderBy: { createdAt: "desc" },
+            include: { session: true }  
+
+        })
+        return res.status(200).json({ bookings });
+    } catch (error) {
+        console.log("Error fetching bookings:", error);
+        return res.status(500).json({ error: "Internal server error" });
+    }
 };
+
