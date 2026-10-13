@@ -38,5 +38,5 @@ model Booking {
   user      User          @relation(fields: [userId], references: [id])
   session   Session       @relation(fields: [sessionId], references: [id])
   status    BookingStatus @default(CONFIRMED)
-  code      String        @unique
+  code      String?       @unique
 }

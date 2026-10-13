@@ -47,7 +47,30 @@ export const createBooking = async (req: Request, res: Response) => {
         const seatsRemaining = session.capacity - bookedCount;
 
         if (seatsRemaining <= 0) {
-            return res.status(400).json({ error: "Session is fully booked" });
+            // wether is it already in the waiting list or not 
+            const isAlreadyInWaitingList = await prisma.booking.findFirst({
+                where :{
+                    userId,
+                    sessionId,
+                    status: "WAITING_LIST",
+                }
+            })
+            if (isAlreadyInWaitingList) {
+                return res.status(400).json({ error: "You are already in the waiting list for this session" });
+            }
+            const waitlistBooking = await prisma.booking.create({
+                data: {
+                    userId,
+                    sessionId,
+                    status: "WAITING_LIST",
+                    code : null
+                }
+            });
+            const{code, ...w} = waitlistBooking;
+            return res.status(200).json({
+                message: "Session is full. You've been added to the waiting list.",
+                booking: w,
+            });
         }
 
         const { booking: newBooking, session: verifiedSession } = await prisma.$transaction(async (tx) => {
@@ -97,7 +120,7 @@ export const getBookings = async (req: Request, res: Response) => {
         const bookings = await prisma.booking.findMany({
             where: showAll ? {} : { userId },
             orderBy: { createdAt: "desc" },
-            include: { session: true }  
+            include: { session: true }
 
         })
         return res.status(200).json({ bookings });
@@ -107,3 +130,39 @@ export const getBookings = async (req: Request, res: Response) => {
     }
 };
 
+export const cancelBooking = async (req: Request, res: Response) => {
+    const bookingId = Number(req.params.id);
+    const userId = req.user?.id;
+    if (!userId || !bookingId) {
+        return res.status(400).json({ message: "Invalid Data" });
+    }
+
+    try {
+        const booking = await prisma.booking.findFirst({
+            where: {
+                id: bookingId,
+                userId,
+                status: "CONFIRMED"
+            },
+            include: { session: true }
+        });
+
+        if (!booking) {
+            return res.status(404).json({ message: "Booking not found" });
+        }
+
+        if (booking.session.scheduledFor < new Date()) {
+            return res.status(400).json({ message: "Cannot cancel a past session" });
+        }
+
+        const cancelled = await prisma.booking.update({
+            where: { id: bookingId },
+            data: { status: "CANCELLED" }
+        });
+
+        return res.status(200).json({ message: "Booking cancelled", booking: cancelled });
+    } catch (error) {
+        console.error("Cancel booking error:", error);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+}
