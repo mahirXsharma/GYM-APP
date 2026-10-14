@@ -9,15 +9,6 @@ export const createSession = async (req: Request, res: Response) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { isAdmin: true },
-    });
-
-    if (!user || !user.isAdmin) {
-      return res.status(403).json({ error: "Forbidden: Admin access required" });
-    }
-
     const parsed = createSessionSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ error: parsed.error.issues[0]?.message });
@@ -49,7 +40,11 @@ export const createSession = async (req: Request, res: Response) => {
 export const getSessions = async (req: Request, res: Response) => {
   try {
     const isAdmin = req.user?.isAdmin;
-    const showAll = req.query.all === "true";
+    const allQuery = req.query.all;
+    if (allQuery !== undefined && allQuery !== "true" && allQuery !== "false") {
+      return res.status(400).json({ error: "Query parameter 'all' must be 'true' or 'false'" });
+    }
+    const showAll = allQuery === "true";
     if (showAll && !isAdmin) {
       return res.status(403).json({ error: "Forbidden: Admin access required" });
     }
@@ -121,8 +116,7 @@ export const getLiveSessions = async (req: Request, res: Response) => {
       });
 
       if (liveSessions.length === 0) {
-        return res.status(404).json({ error: "Oops! There are no live Sessions right now!" })
-
+        return res.status(200).json({ liveSessions: [] });
       }
 
       const sessionsWithSeats = liveSessions.map(({ _count, ...s }) => ({
@@ -140,7 +134,7 @@ export const getLiveSessions = async (req: Request, res: Response) => {
     });
 
     if (bookings.length === 0) {
-      return res.status(404).json({ error: "You haven't booked any session yet!" })
+      return res.status(200).json({ liveSessions: [] });
     }
 
     const liveSessions = bookings.filter((booking) => {
@@ -152,8 +146,7 @@ export const getLiveSessions = async (req: Request, res: Response) => {
     });
 
     if (liveSessions.length === 0) {
-      return res.status(404).json({ error: "Oops! There are no live Sessions right now!" })
-
+      return res.status(200).json({ liveSessions: [] });
     }
 
     return res.status(200).json({ liveSessions });
@@ -166,24 +159,25 @@ export const getLiveSessions = async (req: Request, res: Response) => {
 
 export const oneLiveSession = async (req: Request, res: Response) => {
   const sessionId = Number(req.params?.id);
-  if (!sessionId) {
-    return res.status(400).json({ error: "Invalid Session ID" });
+
+  if (!Number.isInteger(sessionId) || sessionId <= 0) {
+    return res.status(400).json({ error: "Invalid session ID" });
   }
   // return the session + it should also return all the users which have confirmed bookings for this session
   try {
     const session = await prisma.session.findUnique({
       where: { id: sessionId },
-      include:{
-        bookings:{
-          where:{
-            status:"CONFIRMED"
+      include: {
+        bookings: {
+          where: {
+            status: "CONFIRMED"
           },
-          select:{
-            user:{
-              select:{
-                id:true,
-                name:true,
-                email:true
+          select: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true
               }
             }
           }

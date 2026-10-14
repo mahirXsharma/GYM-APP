@@ -18,7 +18,7 @@ export const signup = async (req: Request, res: Response) => {
       },
     });
     if (user) {
-      return res.status(400).json({ error: "User already exists" });
+      return res.status(409).json({ error: "User already exists" });
     }
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
@@ -56,7 +56,7 @@ export const signup = async (req: Request, res: Response) => {
     
   } catch (error) {
     console.error("Signup error:", error);
-    res.status(500).json({ error: "Internal server error", details: (error as Error).message });
+    return res.status(500).json({ error: "Internal server error" });
   }
 };
 
@@ -76,12 +76,12 @@ export const login = async (req: Request, res: Response) => {
     });
 
     if (!user) {
-      return res.status(400).json({ error: "Invalid credentials" });
+      return res.status(401).json({ error: "Invalid credentials" });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      return res.status(400).json({ error: "Invalid credentials" });
+      return res.status(401).json({ error: "Invalid credentials" });
     }
 
     const token = jwt.sign(
@@ -109,6 +109,6 @@ export const login = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("Login error:", error);
-    res.status(500).json({ error: "Internal server error", details: (error as Error).message });
+    return res.status(500).json({ error: "Internal server error" });
   }
 };

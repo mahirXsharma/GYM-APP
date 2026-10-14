@@ -10,7 +10,7 @@ export const createBooking = async (req: Request, res: Response) => {
         }
 
         const sessionId = Number(req.params.id);
-        if (!sessionId || isNaN(sessionId)) {
+        if (!Number.isInteger(sessionId) || sessionId <= 0) {
             return res.status(400).json({ error: "Invalid session ID" });
         }
 
@@ -23,7 +23,7 @@ export const createBooking = async (req: Request, res: Response) => {
         });
 
         if (existingBooking) {
-            return res.status(400).json({ error: "You already have a booking for this session" });
+            return res.status(409).json({ error: "You already have a booking for this session" });
         }
 
         const session = await prisma.session.findUnique({
@@ -39,8 +39,12 @@ export const createBooking = async (req: Request, res: Response) => {
             },
         });
 
-        if (!session || session.scheduledFor < new Date()) {
-            return res.status(400).json({ error: "Session not found or has already passed" });
+        if (!session) {
+            return res.status(404).json({ error: "Session not found" });
+        }
+
+        if (session.scheduledFor < new Date()) {
+            return res.status(400).json({ error: "Session has already passed" });
         }
 
         const bookedCount = session._count.bookings;
@@ -56,7 +60,7 @@ export const createBooking = async (req: Request, res: Response) => {
                 }
             })
             if (isAlreadyInWaitingList) {
-                return res.status(400).json({ error: "You are already in the waiting list for this session" });
+                return res.status(409).json({ error: "You are already in the waiting list for this session" });
             }
             const waitlistBooking = await prisma.booking.create({
                 data: {
@@ -99,11 +103,14 @@ export const createBooking = async (req: Request, res: Response) => {
 
         const { capacity, _count } = verifiedSession;
         return res.status(201).json({
-            message: "Session booked successfullyy",
+            message: "Session booked successfully",
             booking: newBooking,
             seatsRemaining: capacity - _count.bookings - 1
         });
-    } catch (error) {
+    } catch (error: any) {
+        if (error?.message === "Session is full!") {
+            return res.status(409).json({ error: "Session is full" });
+        }
         console.error("Create booking error:", error);
         return res.status(500).json({ error: "Internal server error" });
     }
@@ -111,7 +118,11 @@ export const createBooking = async (req: Request, res: Response) => {
 
 export const getBookings = async (req: Request, res: Response) => {
     const userId = req.user?.id;
-    const isActive = req.query?.active === "true";
+    const activeQuery = req.query?.active;
+    if (activeQuery !== undefined && activeQuery !== "true" && activeQuery !== "false") {
+        return res.status(400).json({ error: "Query parameter 'active' must be 'true' or 'false'" });
+    }
+    const isActive = activeQuery === "true";
 
     if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
@@ -146,24 +157,30 @@ export const getBookings = async (req: Request, res: Response) => {
 export const cancelBooking = async (req: Request, res: Response) => {
     const bookingId = Number(req.params.id);
     const userId = req.user?.id;
-    if (!userId || !bookingId) {
-        return res.status(400).json({ message: "Invalid Data" });
+    if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+    if (!Number.isInteger(bookingId) || bookingId <= 0) {
+        return res.status(400).json({ error: "Invalid booking ID" });
     }
 
     try {
-        const booking = await prisma.booking.findFirst({
-            where: {
-                id: bookingId,
-                userId,
-                status: {
-                    in: ["CONFIRMED", "WAITING_LIST"]
-                }
-            },
+        const booking = await prisma.booking.findUnique({
+            where: { id: bookingId },
             include: { session: true }
         });
 
         if (!booking) {
-            return res.status(404).json({ message: "Booking not found" });
+            return res.status(404).json({ error: "Booking not found" });
+        }
+
+        const isAdmin = req.user?.isAdmin;
+        if (!isAdmin && booking.userId !== userId) {
+            return res.status(403).json({ error: "Forbidden: You can only cancel your own bookings" });
+        }
+
+        if (booking.status !== "CONFIRMED" && booking.status !== "WAITING_LIST") {
+            return res.status(400).json({ error: `Cannot cancel a booking that is already ${booking.status.toLowerCase()}` });
         }
         if (booking.status == "WAITING_LIST") {
             const waiting = await prisma.booking.delete({
@@ -175,7 +192,7 @@ export const cancelBooking = async (req: Request, res: Response) => {
         }
 
         if (booking.session.scheduledFor < new Date()) {
-            return res.status(400).json({ message: "Cannot cancel a past session" });
+            return res.status(400).json({ error: "Cannot cancel a past session" });
         }
 
         const { cancelled } = await prisma.$transaction(async (tx) => {
@@ -217,45 +234,50 @@ export const cancelBooking = async (req: Request, res: Response) => {
 }
 
 export const markAttendance = async (req: Request, res: Response) => {
-    const isAdmin = req.user?.isAdmin;
-    const code = req.body?.code;
-    if (!isAdmin) {
-        return res.status(401).json({ error: "Unauthorized" });
-    }
-    if (!code) {
-        return res.status(400).json({ error: "Please Enter a Valid Code" });
-    }
+    const rawCode = req.body?.code;
 
-    const booking = await prisma.booking.findFirst({
-        where: {
-            code,
-            status: "CONFIRMED"
-        },
-        include: {
-            session: true
+    if (typeof rawCode !== "string" || !rawCode.trim()) {
+        return res.status(400).json({ error: "Attendance code is required" });
+    }
+    const code = rawCode.trim().toUpperCase();
+
+    try {
+        const booking = await prisma.booking.findFirst({
+            where: {
+                code,
+                status: "CONFIRMED"
+            },
+            include: {
+                session: true
+            }
+        })
+
+        if (!booking) {
+            return res.status(404).json({ error: "Booking not found" });
         }
-    })
 
-    if (!booking) {
-        return res.status(404).json({ message: "Booking not found" });
-    }
+        const now = new Date();
+        const sessionStart = new Date(booking.session.scheduledFor);
+        const sessionEnd = new Date(sessionStart.getTime());
+        sessionEnd.setHours(sessionEnd.getHours() + 1); // 1 hour duration
 
-    const now = new Date();
-    const sessionStart = new Date(booking.session.scheduledFor);
-    const sessionEnd = new Date(sessionStart.getTime());
-    sessionEnd.setHours(sessionEnd.getHours() + 1); // 1 hour duration
-
-    if (now <= sessionStart || now >= sessionEnd) {
-        return res.status(400).json({
-            error: "Check-in is only allowed during the session's active hour."
-        });
-    }
-
-    const updatedBooking = await prisma.booking.update({
-        where: { id: booking.id },
-        data: {
-            status: "ATTENDED"
+        if (now <= sessionStart || now >= sessionEnd) {
+            return res.status(400).json({
+                error: "Check-in is only allowed during the session's active hour."
+            });
         }
-    })
-    return res.status(200).json({ message: "Attendance marked successfully", booking: updatedBooking });
+
+        const updatedBooking = await prisma.booking.update({
+            where: { id: booking.id },
+            data: {
+                status: "ATTENDED"
+            }
+        })
+        return res.status(200).json({ message: "Attendance marked successfully", booking: updatedBooking });
+    } catch (error) {
+        console.error("Error marking attendance:", error);
+        return res.status(500).json({ error: "Internal server error" });
+
+    }
+
 }
