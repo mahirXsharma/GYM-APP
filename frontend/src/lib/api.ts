@@ -32,6 +32,11 @@ export interface BookingItem {
   status: 'CONFIRMED' | 'CANCELLED' | 'WAITING_LIST' | 'ATTENDED' | 'NO_SHOW';
   code: string | null;
   session?: SessionItem;
+  user?: {
+    id: number;
+    name: string;
+    email: string;
+  };
 }
 
 export class ApiError extends Error {
@@ -124,3 +129,22 @@ export const bookingsApi = {
       method: 'DELETE',
     }),
 };
+
+export const adminApi = {
+  createSession: (payload: { scheduledFor: string; capacity: number }) =>
+    request<{ message: string; session: SessionItem }>('/sessions', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  getAllSessions: () => sessionsApi.getSessions(true),
+
+  getAllBookings: () => bookingsApi.getMyBookings(),
+
+  markAttendance: (code: string) =>
+    request<{ message: string; booking: BookingItem }>('/booking/check-in', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    }),
+};
+

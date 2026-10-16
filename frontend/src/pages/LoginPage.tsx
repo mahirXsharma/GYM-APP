@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -13,8 +13,14 @@ interface LoginFormInputs {
 
 function LoginPage() {
   const [serverError, setServerError] = useState("");
-  const { setAuthData } = useAuth();
+  const { setAuthData, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/sessions", { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const {
     register,
@@ -35,41 +41,52 @@ function LoginPage() {
       });
 
       setAuthData(res.token, res.user);
-      navigate("/");
+      navigate("/sessions");
     } catch (err: any) {
       if (err instanceof ApiError) {
         setServerError(err.message);
       } else {
-        setServerError("Something went wrong. Please try again.");
+        setServerError("Unable to connect to the server. Please try again.");
       }
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <div className="w-full max-w-sm rounded-lg border p-6 shadow-sm">
-        <h1 className="text-2xl font-bold text-center">Login</h1>
-        <p className="text-sm text-center text-muted-foreground mt-1 mb-6">
-          Enter your email and password to access your account
-        </p>
+    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center p-4 bg-neutral-950 text-neutral-100">
+      <div className="w-full max-w-sm rounded-lg border border-neutral-800 bg-neutral-900 p-6 sm:p-8 space-y-6">
+        <div className="text-center space-y-1">
+          <h1 className="text-2xl font-bold text-white">Member Login</h1>
+          <p className="text-xs text-neutral-400">
+            Sign in to view workout sessions and manage bookings
+          </p>
+        </div>
 
         {serverError && (
-          <div role="alert" className="mb-4 rounded bg-red-50 p-3 text-sm text-red-600 border border-red-200">
-            {serverError}
+          <div
+            role="alert"
+            className="rounded-md bg-red-950/60 p-3 text-xs text-red-200 border border-red-800"
+          >
+            <p className="font-semibold">Error:</p>
+            <p>{serverError}</p>
           </div>
         )}
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
           <div>
-            <label htmlFor="email" className="block text-sm font-medium mb-1">
-              Email
+            <label
+              htmlFor="login-email"
+              className="block text-xs font-semibold text-neutral-300 mb-1"
+            >
+              Email Address
             </label>
             <Input
-              id="email"
+              id="login-email"
               type="email"
-              placeholder="name@example.com"
+              placeholder="user@example.com"
               disabled={isSubmitting}
-              className={errors.email ? "border-red-500 focus-visible:ring-red-300" : ""}
+              className={`bg-neutral-950 border-neutral-700 text-white text-sm ${
+                errors.email ? "border-red-500" : ""
+              }`}
               {...register("email", {
                 required: "Email is required.",
                 pattern: {
@@ -82,20 +99,27 @@ function LoginPage() {
               })}
             />
             {errors.email && (
-              <p className="text-xs text-red-600 mt-1">{errors.email.message}</p>
+              <p className="text-xs text-red-400 mt-1" role="alert">
+                ⚠ {errors.email.message}
+              </p>
             )}
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium mb-1">
+            <label
+              htmlFor="login-password"
+              className="block text-xs font-semibold text-neutral-300 mb-1"
+            >
               Password
             </label>
             <Input
-              id="password"
+              id="login-password"
               type="password"
-              placeholder="••••••••"
+              placeholder="Enter your password"
               disabled={isSubmitting}
-              className={errors.password ? "border-red-500 focus-visible:ring-red-300" : ""}
+              className={`bg-neutral-950 border-neutral-700 text-white text-sm ${
+                errors.password ? "border-red-500" : ""
+              }`}
               {...register("password", {
                 required: "Password is required.",
                 onChange: () => {
@@ -104,19 +128,25 @@ function LoginPage() {
               })}
             />
             {errors.password && (
-              <p className="text-xs text-red-600 mt-1">{errors.password.message}</p>
+              <p className="text-xs text-red-400 mt-1" role="alert">
+                ⚠ {errors.password.message}
+              </p>
             )}
           </div>
 
-          <Button type="submit" disabled={isSubmitting} className="w-full mt-2">
-            {isSubmitting ? "Logging in..." : "Login"}
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full bg-white text-black hover:bg-neutral-200 font-semibold text-sm h-10 mt-2"
+          >
+            {isSubmitting ? "Signing in..." : "Sign In"}
           </Button>
         </form>
 
-        <p className="text-sm text-center text-muted-foreground mt-6">
+        <p className="text-xs text-center text-neutral-400">
           Don&apos;t have an account?{" "}
-          <Link to="/register" className="underline text-foreground font-medium">
-            Register
+          <Link to="/register" className="text-white underline hover:text-neutral-200 font-medium">
+            Register here
           </Link>
         </p>
       </div>

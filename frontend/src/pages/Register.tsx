@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -15,8 +15,14 @@ interface RegisterFormInputs {
 
 function Register() {
   const [serverError, setServerError] = useState("");
-  const { setAuthData } = useAuth();
+  const { setAuthData, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/sessions", { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const {
     register,
@@ -41,42 +47,52 @@ function Register() {
       });
 
       setAuthData(res.token, res.user);
-      navigate("/");
+      navigate("/sessions");
     } catch (err: any) {
       if (err instanceof ApiError) {
         setServerError(err.message);
       } else {
-        setServerError("Something went wrong. Please try again.");
+        setServerError("Failed to create account. Please try again.");
       }
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <div className="w-full max-w-sm rounded-lg border p-6 shadow-sm">
-        <h1 className="text-2xl font-bold text-center">Register</h1>
-        <p className="text-sm text-center text-muted-foreground mt-1 mb-6">
-          Create an account to book your gym sessions
-        </p>
+    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center p-4 bg-neutral-950 text-neutral-100">
+      <div className="w-full max-w-sm rounded-lg border border-neutral-800 bg-neutral-900 p-6 sm:p-8 space-y-6">
+        <div className="text-center space-y-1">
+          <h1 className="text-2xl font-bold text-white">Create Account</h1>
+          <p className="text-xs text-neutral-400">
+            Register to start booking workout sessions
+          </p>
+        </div>
 
         {serverError && (
-          <div role="alert" className="mb-4 rounded bg-red-50 p-3 text-sm text-red-600 border border-red-200">
-            {serverError}
+          <div
+            role="alert"
+            className="rounded-md bg-red-950/60 p-3 text-xs text-red-200 border border-red-800"
+          >
+            <p className="font-semibold">Error:</p>
+            <p>{serverError}</p>
           </div>
         )}
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-          {/* Name Field */}
           <div>
-            <label htmlFor="name" className="block text-sm font-medium mb-1">
+            <label
+              htmlFor="reg-name"
+              className="block text-xs font-semibold text-neutral-300 mb-1"
+            >
               Full Name
             </label>
             <Input
-              id="name"
+              id="reg-name"
               type="text"
               placeholder="John Doe"
               disabled={isSubmitting}
-              className={errors.name ? "border-red-500 focus-visible:ring-red-300" : ""}
+              className={`bg-neutral-950 border-neutral-700 text-white text-sm ${
+                errors.name ? "border-red-500" : ""
+              }`}
               {...register("name", {
                 required: "Full name is required.",
                 minLength: {
@@ -89,21 +105,27 @@ function Register() {
               })}
             />
             {errors.name && (
-              <p className="text-xs text-red-600 mt-1">{errors.name.message}</p>
+              <p className="text-xs text-red-400 mt-1" role="alert">
+                ⚠ {errors.name.message}
+              </p>
             )}
           </div>
 
-          {/* Email Field */}
           <div>
-            <label htmlFor="email" className="block text-sm font-medium mb-1">
-              Email
+            <label
+              htmlFor="reg-email"
+              className="block text-xs font-semibold text-neutral-300 mb-1"
+            >
+              Email Address
             </label>
             <Input
-              id="email"
+              id="reg-email"
               type="email"
-              placeholder="name@example.com"
+              placeholder="user@example.com"
               disabled={isSubmitting}
-              className={errors.email ? "border-red-500 focus-visible:ring-red-300" : ""}
+              className={`bg-neutral-950 border-neutral-700 text-white text-sm ${
+                errors.email ? "border-red-500" : ""
+              }`}
               {...register("email", {
                 required: "Email is required.",
                 pattern: {
@@ -116,21 +138,27 @@ function Register() {
               })}
             />
             {errors.email && (
-              <p className="text-xs text-red-600 mt-1">{errors.email.message}</p>
+              <p className="text-xs text-red-400 mt-1" role="alert">
+                ⚠ {errors.email.message}
+              </p>
             )}
           </div>
 
-          {/* Password Field */}
           <div>
-            <label htmlFor="password" className="block text-sm font-medium mb-1">
+            <label
+              htmlFor="reg-password"
+              className="block text-xs font-semibold text-neutral-300 mb-1"
+            >
               Password
             </label>
             <Input
-              id="password"
+              id="reg-password"
               type="password"
-              placeholder="••••••••"
+              placeholder="At least 6 characters"
               disabled={isSubmitting}
-              className={errors.password ? "border-red-500 focus-visible:ring-red-300" : ""}
+              className={`bg-neutral-950 border-neutral-700 text-white text-sm ${
+                errors.password ? "border-red-500" : ""
+              }`}
               {...register("password", {
                 required: "Password is required.",
                 minLength: {
@@ -144,21 +172,27 @@ function Register() {
               })}
             />
             {errors.password && (
-              <p className="text-xs text-red-600 mt-1">{errors.password.message}</p>
+              <p className="text-xs text-red-400 mt-1" role="alert">
+                ⚠ {errors.password.message}
+              </p>
             )}
           </div>
 
-          {/* Confirm Password Field */}
           <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium mb-1">
+            <label
+              htmlFor="reg-confirm-password"
+              className="block text-xs font-semibold text-neutral-300 mb-1"
+            >
               Confirm Password
             </label>
             <Input
-              id="confirmPassword"
+              id="reg-confirm-password"
               type="password"
-              placeholder="••••••••"
+              placeholder="Confirm your password"
               disabled={isSubmitting}
-              className={errors.confirmPassword ? "border-red-500 focus-visible:ring-red-300" : ""}
+              className={`bg-neutral-950 border-neutral-700 text-white text-sm ${
+                errors.confirmPassword ? "border-red-500" : ""
+              }`}
               {...register("confirmPassword", {
                 required: "Please confirm your password.",
                 validate: (val) => val === passwordValue || "Passwords do not match.",
@@ -168,19 +202,25 @@ function Register() {
               })}
             />
             {errors.confirmPassword && (
-              <p className="text-xs text-red-600 mt-1">{errors.confirmPassword.message}</p>
+              <p className="text-xs text-red-400 mt-1" role="alert">
+                ⚠ {errors.confirmPassword.message}
+              </p>
             )}
           </div>
 
-          <Button type="submit" disabled={isSubmitting} className="w-full mt-2">
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full bg-white text-black hover:bg-neutral-200 font-semibold text-sm h-10 mt-2"
+          >
             {isSubmitting ? "Creating account..." : "Register"}
           </Button>
         </form>
 
-        <p className="text-sm text-center text-muted-foreground mt-6">
+        <p className="text-xs text-center text-neutral-400">
           Already have an account?{" "}
-          <Link to="/login" className="underline text-foreground font-medium">
-            Login
+          <Link to="/login" className="text-white underline hover:text-neutral-200 font-medium">
+            Sign in here
           </Link>
         </p>
       </div>

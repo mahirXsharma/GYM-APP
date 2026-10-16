@@ -144,10 +144,24 @@ export const getBookings = async (req: Request, res: Response) => {
             },
 
             orderBy: { createdAt: "desc" },
-            include: { session: true }
+            include: { 
+                session: true,
+                user: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true
+                    }
+                }
+            }
 
         })
-        return res.status(200).json({ bookings });
+
+        const sanitizedBookings = showAll
+            ? bookings.map(({ code, ...rest }) => ({ ...rest, code: null }))
+            : bookings;
+
+        return res.status(200).json({ bookings: sanitizedBookings });
     } catch (error) {
         console.log("Error fetching bookings:", error);
         return res.status(500).json({ error: "Internal server error" });
