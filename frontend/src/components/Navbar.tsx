@@ -77,7 +77,7 @@ export const Navbar = () => {
           ) : (
             <div className="flex items-center gap-3">
               <Link to="/login">
-                <Button variant="ghost" size="sm" className="text-neutral-300 hover:text-black">
+                <Button variant="ghost" size="sm" className="text-neutral-300 hover:!bg-white hover:!text-black transition-colors">
                   Sign In
                 </Button>
               </Link>
@@ -153,7 +153,7 @@ export const Navbar = () => {
           ) : (
             <div className="grid grid-cols-2 gap-2 pt-1">
               <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
-                <Button variant="outline" size="sm" className="w-full text-black border-neutral-700">
+                <Button variant="outline" size="sm" className="w-full bg-white text-black hover:bg-neutral-200 border-neutral-700 font-semibold">
                   Sign In
                 </Button>
               </Link>
