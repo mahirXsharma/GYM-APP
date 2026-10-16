@@ -100,11 +100,10 @@ export const MyBookings = () => {
         {feedback && (
           <div
             role="alert"
-            className={`p-4 rounded-md border text-sm flex items-start justify-between gap-2 ${
-              feedback.type === "success"
+            className={`p-4 rounded-md border text-sm flex items-start justify-between gap-2 ${feedback.type === "success"
                 ? "bg-emerald-950/60 border-emerald-800 text-emerald-200"
                 : "bg-red-950/60 border-red-800 text-red-200"
-            }`}
+              }`}
           >
             <div>
               <strong>{feedback.type === "success" ? "Success: " : "Notice: "}</strong>
@@ -125,22 +124,20 @@ export const MyBookings = () => {
             <button
               type="button"
               onClick={() => setActiveOnly(false)}
-              className={`px-3 py-1.5 rounded text-xs font-semibold ${
-                !activeOnly
+              className={`px-3 py-1.5 rounded text-xs font-semibold ${!activeOnly
                   ? "bg-white text-black"
                   : "bg-neutral-800 text-neutral-400 hover:text-white"
-              }`}
+                }`}
             >
               All Bookings ({bookings.length})
             </button>
             <button
               type="button"
               onClick={() => setActiveOnly(true)}
-              className={`px-3 py-1.5 rounded text-xs font-semibold ${
-                activeOnly
+              className={`px-3 py-1.5 rounded text-xs font-semibold ${activeOnly
                   ? "bg-white text-black"
                   : "bg-neutral-800 text-neutral-400 hover:text-white"
-              }`}
+                }`}
             >
               Active Only
             </button>
@@ -208,13 +205,12 @@ export const MyBookings = () => {
               return (
                 <div
                   key={booking.id}
-                  className={`border rounded-lg p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-neutral-900 ${
-                    isConfirmed
+                  className={`border rounded-lg p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-neutral-900 ${isConfirmed
                       ? "border-emerald-800/80"
                       : isWaitlist
-                      ? "border-amber-800/80"
-                      : "border-neutral-800"
-                  }`}
+                        ? "border-amber-800/80"
+                        : "border-neutral-800"
+                    }`}
                 >
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
@@ -254,10 +250,10 @@ export const MyBookings = () => {
                       {isWaitlist
                         ? "You are on the waitlist. If another member cancels, you will be automatically promoted."
                         : isAttended
-                        ? "Attendance confirmed by admin."
-                        : user?.isAdmin
-                        ? "Member must provide their passcode at check-in."
-                        : "Show your passcode to gym staff upon arrival."}
+                          ? "Attendance confirmed by admin."
+                          : user?.isAdmin
+                            ? "Member must provide their passcode at check-in."
+                            : "Show your passcode to gym staff upon arrival."}
                     </p>
                   </div>
 

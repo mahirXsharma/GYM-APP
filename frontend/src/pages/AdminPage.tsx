@@ -200,11 +200,10 @@ export const AdminPage = () => {
             {createFeedback && (
               <div
                 role="alert"
-                className={`p-3 rounded border text-xs flex items-start justify-between gap-2 ${
-                  createFeedback.type === "success"
+                className={`p-3 rounded border text-xs flex items-start justify-between gap-2 ${createFeedback.type === "success"
                     ? "bg-emerald-950/60 border-emerald-800 text-emerald-200"
                     : "bg-red-950/60 border-red-800 text-red-200"
-                }`}
+                  }`}
               >
                 <div>
                   <strong>{createFeedback.type === "success" ? "Success: " : "Error: "}</strong>
@@ -232,9 +231,8 @@ export const AdminPage = () => {
                   id="admin-scheduledFor"
                   type="datetime-local"
                   disabled={isCreatingSession}
-                  className={`bg-neutral-950 border-neutral-700 text-white text-sm ${
-                    sessionErrors.scheduledFor ? "border-red-500" : ""
-                  }`}
+                  className={`bg-neutral-950 border-neutral-700 text-white text-sm ${sessionErrors.scheduledFor ? "border-red-500" : ""
+                    }`}
                   {...registerSession("scheduledFor", {
                     required: "Scheduled date and time is required.",
                     validate: (val) => {
@@ -268,9 +266,8 @@ export const AdminPage = () => {
                   min="1"
                   max="100"
                   disabled={isCreatingSession}
-                  className={`bg-neutral-950 border-neutral-700 text-white text-sm ${
-                    sessionErrors.capacity ? "border-red-500" : ""
-                  }`}
+                  className={`bg-neutral-950 border-neutral-700 text-white text-sm ${sessionErrors.capacity ? "border-red-500" : ""
+                    }`}
                   {...registerSession("capacity", {
                     required: "Capacity is required.",
                     min: { value: 1, message: "Capacity must be at least 1." },
@@ -306,11 +303,10 @@ export const AdminPage = () => {
             {checkInFeedback && (
               <div
                 role="alert"
-                className={`p-3 rounded border text-xs flex items-start justify-between gap-2 ${
-                  checkInFeedback.type === "success"
+                className={`p-3 rounded border text-xs flex items-start justify-between gap-2 ${checkInFeedback.type === "success"
                     ? "bg-emerald-950/60 border-emerald-800 text-emerald-200"
                     : "bg-red-950/60 border-red-800 text-red-200"
-                }`}
+                  }`}
               >
                 <div>
                   <strong>{checkInFeedback.type === "success" ? "Success: " : "Error: "}</strong>
@@ -340,9 +336,8 @@ export const AdminPage = () => {
                   placeholder="e.g. 7F3B9A1C"
                   maxLength={16}
                   disabled={isCheckingIn}
-                  className={`bg-neutral-950 border-neutral-700 text-white font-mono uppercase text-base h-11 tracking-wider ${
-                    checkInErrors.code ? "border-red-500" : ""
-                  }`}
+                  className={`bg-neutral-950 border-neutral-700 text-white font-mono uppercase text-base h-11 tracking-wider ${checkInErrors.code ? "border-red-500" : ""
+                    }`}
                   {...registerCheckIn("code", {
                     required: "Passcode is required.",
                     minLength: { value: 6, message: "Code must be at least 6 characters." },

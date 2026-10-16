@@ -90,9 +90,8 @@ function Register() {
               type="text"
               placeholder="John Doe"
               disabled={isSubmitting}
-              className={`bg-neutral-950 border-neutral-700 text-white text-sm ${
-                errors.name ? "border-red-500" : ""
-              }`}
+              className={`bg-neutral-950 border-neutral-700 text-white text-sm ${errors.name ? "border-red-500" : ""
+                }`}
               {...register("name", {
                 required: "Full name is required.",
                 minLength: {
@@ -123,9 +122,8 @@ function Register() {
               type="email"
               placeholder="user@example.com"
               disabled={isSubmitting}
-              className={`bg-neutral-950 border-neutral-700 text-white text-sm ${
-                errors.email ? "border-red-500" : ""
-              }`}
+              className={`bg-neutral-950 border-neutral-700 text-white text-sm ${errors.email ? "border-red-500" : ""
+                }`}
               {...register("email", {
                 required: "Email is required.",
                 pattern: {
@@ -156,9 +154,8 @@ function Register() {
               type="password"
               placeholder="At least 6 characters"
               disabled={isSubmitting}
-              className={`bg-neutral-950 border-neutral-700 text-white text-sm ${
-                errors.password ? "border-red-500" : ""
-              }`}
+              className={`bg-neutral-950 border-neutral-700 text-white text-sm ${errors.password ? "border-red-500" : ""
+                }`}
               {...register("password", {
                 required: "Password is required.",
                 minLength: {
@@ -190,9 +187,8 @@ function Register() {
               type="password"
               placeholder="Confirm your password"
               disabled={isSubmitting}
-              className={`bg-neutral-950 border-neutral-700 text-white text-sm ${
-                errors.confirmPassword ? "border-red-500" : ""
-              }`}
+              className={`bg-neutral-950 border-neutral-700 text-white text-sm ${errors.confirmPassword ? "border-red-500" : ""
+                }`}
               {...register("confirmPassword", {
                 required: "Please confirm your password.",
                 validate: (val) => val === passwordValue || "Passwords do not match.",

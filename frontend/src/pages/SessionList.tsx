@@ -185,11 +185,10 @@ export const SessionList = () => {
         {feedback && (
           <div
             role="alert"
-            className={`p-4 rounded-md border text-sm flex items-start justify-between gap-2 ${
-              feedback.type === "success"
+            className={`p-4 rounded-md border text-sm flex items-start justify-between gap-2 ${feedback.type === "success"
                 ? "bg-emerald-950/60 border-emerald-800 text-emerald-200"
                 : "bg-red-950/60 border-red-800 text-red-200"
-            }`}
+              }`}
           >
             <div>
               <strong>{feedback.type === "success" ? "Success: " : "Notice: "}</strong>
@@ -256,13 +255,12 @@ export const SessionList = () => {
               return (
                 <div
                   key={session.id}
-                  className={`border rounded-lg p-5 flex flex-col justify-between bg-neutral-900 space-y-4 ${
-                    isConfirmed
+                  className={`border rounded-lg p-5 flex flex-col justify-between bg-neutral-900 space-y-4 ${isConfirmed
                       ? "border-emerald-700 bg-emerald-950/20"
                       : isWaitlisted
-                      ? "border-amber-700 bg-amber-950/20"
-                      : "border-neutral-800"
-                  }`}
+                        ? "border-amber-700 bg-amber-950/20"
+                        : "border-neutral-800"
+                    }`}
                 >
                   <div className="space-y-3">
                     <div className="flex items-center justify-between text-xs">
@@ -329,17 +327,16 @@ export const SessionList = () => {
                       <Button
                         onClick={() => handleBook(session)}
                         disabled={isBookingThis}
-                        className={`w-full text-xs font-semibold ${
-                          isFull
+                        className={`w-full text-xs font-semibold ${isFull
                             ? "bg-neutral-800 text-amber-300 hover:bg-neutral-700 border border-neutral-700"
                             : "bg-white text-black hover:bg-neutral-200"
-                        }`}
+                          }`}
                       >
                         {isBookingThis
                           ? "Booking..."
                           : isFull
-                          ? "Join Waiting List"
-                          : "Book Spot"}
+                            ? "Join Waiting List"
+                            : "Book Spot"}
                       </Button>
                     )}
                   </div>

@@ -29,22 +29,20 @@ export const Navbar = () => {
             <>
               <Link
                 to="/sessions"
-                className={`transition-colors ${
-                  isActive("/sessions") || isActive("/sessionList")
+                className={`transition-colors ${isActive("/sessions") || isActive("/sessionList")
                     ? "text-white font-semibold underline underline-offset-4"
                     : "text-neutral-400 hover:text-white"
-                }`}
+                  }`}
               >
                 Sessions
               </Link>
 
               <Link
                 to="/my-bookings"
-                className={`transition-colors ${
-                  isActive("/my-bookings")
+                className={`transition-colors ${isActive("/my-bookings")
                     ? "text-white font-semibold underline underline-offset-4"
                     : "text-neutral-400 hover:text-white"
-                }`}
+                  }`}
               >
                 My Bookings
               </Link>
@@ -52,11 +50,10 @@ export const Navbar = () => {
               {user?.isAdmin && (
                 <Link
                   to="/admin"
-                  className={`px-2.5 py-1 rounded text-xs font-semibold ${
-                    isActive("/admin")
+                  className={`px-2.5 py-1 rounded text-xs font-semibold ${isActive("/admin")
                       ? "bg-amber-500 text-black font-bold"
                       : "bg-neutral-800 text-amber-400 hover:bg-neutral-700"
-                  }`}
+                    }`}
                 >
                   Admin Page
                 </Link>

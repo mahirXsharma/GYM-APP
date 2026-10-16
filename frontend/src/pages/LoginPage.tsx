@@ -84,9 +84,8 @@ function LoginPage() {
               type="email"
               placeholder="user@example.com"
               disabled={isSubmitting}
-              className={`bg-neutral-950 border-neutral-700 text-white text-sm ${
-                errors.email ? "border-red-500" : ""
-              }`}
+              className={`bg-neutral-950 border-neutral-700 text-white text-sm ${errors.email ? "border-red-500" : ""
+                }`}
               {...register("email", {
                 required: "Email is required.",
                 pattern: {
@@ -117,9 +116,8 @@ function LoginPage() {
               type="password"
               placeholder="Enter your password"
               disabled={isSubmitting}
-              className={`bg-neutral-950 border-neutral-700 text-white text-sm ${
-                errors.password ? "border-red-500" : ""
-              }`}
+              className={`bg-neutral-950 border-neutral-700 text-white text-sm ${errors.password ? "border-red-500" : ""
+                }`}
               {...register("password", {
                 required: "Password is required.",
                 onChange: () => {

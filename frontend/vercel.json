@@ -1,8 +1,12 @@
 {
-  "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "https://gym-app-f0ek.onrender.com/api/:path*"
+    "rewrites": [
+        {
+            "source": "/api/:path*",
+            "destination": "https://gym-app-f0ek.onrender.com/api/:path*"
+        },
+        {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
-  ]
+    ]
 }
