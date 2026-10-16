@@ -25,7 +25,10 @@ export const createSession = async (req: Request, res: Response) => {
 
     return res.status(201).json({
       message: "Session created successfully",
-      session: newSession,
+      session: {
+        ...newSession,
+        seatsRemaining: newSession.capacity
+      }
     });
   } catch (error: any) {
     if (error.code === "P2002") {
