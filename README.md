@@ -161,9 +161,12 @@ The API returns consistent JSON responses and follows standard HTTP status codes
 - PostgreSQL database (local or cloud instance like Supabase/Neon/Render)
 
 ### Environment Variables
-Environment variable templates are provided in both directories:
+Only the backend requires environment configuration:
 - `backend/.env.example`
-- `frontend/.env.example`
+
+> **Note on Frontend (Zero-Config)**: No `.env` setup is needed for the frontend! It uses URL rewrites and proxies:
+> - **Local Development**: Vite automatically proxies all `/api` calls to `http://localhost:3000` via [vite.config.ts](file:///c:/Storage/WEB%20DEV/FRONTEND/REACT/Projects/GYM-APP/frontend/vite.config.ts).
+> - **Production (Vercel)**: Vercel seamlessly rewrites `/api/*` requests to the live Render backend via [vercel.json](file:///c:/Storage/WEB%20DEV/FRONTEND/REACT/Projects/GYM-APP/frontend/vercel.json).
 
 ### 1. Backend Setup
 ```bash
@@ -187,11 +190,7 @@ npm run dev
 cd ../frontend
 npm install
 
-# Create .env from template
-cp .env.example .env
-# Set VITE_API_URL=http://localhost:3000/api/v1
-
-# Start frontend application
+# Start frontend application (no .env file required)
 npm run dev
 ```
 Open [http://localhost:5173](http://localhost:5173) in your browser.
