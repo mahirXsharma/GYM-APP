@@ -30,14 +30,6 @@ function App() {
                 }
               />
               <Route
-                path="/sessionList"
-                element={
-                  <ProtectedRoute>
-                    <SessionList />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
                 path="/my-bookings"
                 element={
                   <ProtectedRoute>

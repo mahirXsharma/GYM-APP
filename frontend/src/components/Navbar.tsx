@@ -29,10 +29,11 @@ export const Navbar = () => {
             <>
               <Link
                 to="/sessions"
-                className={`transition-colors ${isActive("/sessions") || isActive("/sessionList")
+                className={`transition-colors ${
+                  isActive("/sessions")
                     ? "text-white font-semibold underline underline-offset-4"
                     : "text-neutral-400 hover:text-white"
-                  }`}
+                }`}
               >
                 Sessions
               </Link>

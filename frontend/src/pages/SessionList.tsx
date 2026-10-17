@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { sessionsApi, bookingsApi, type SessionItem, type BookingItem, ApiError } from "@/lib/api";
@@ -14,10 +14,6 @@ export const SessionList = () => {
   const [bookingInProgressId, setBookingInProgressId] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  const stateSnapshotRef = useRef<{ sessions: SessionItem[]; myBookings: BookingItem[] }>({
-    sessions: [],
-    myBookings: [],
-  });
 
   const loadData = async (quiet: boolean = false) => {
     if (!quiet) {
@@ -36,10 +32,6 @@ export const SessionList = () => {
       setSessions(fetchedSessions);
       setMyBookings(fetchedBookings);
 
-      stateSnapshotRef.current = {
-        sessions: fetchedSessions,
-        myBookings: fetchedBookings,
-      };
     } catch (err: any) {
       if (!quiet) {
         if (err instanceof ApiError) {
