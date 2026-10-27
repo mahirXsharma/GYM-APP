@@ -257,17 +257,33 @@ export const markAttendance = async (req: Request, res: Response) => {
 
     try {
         const booking = await prisma.booking.findFirst({
-            where: {
-                code,
-                status: "CONFIRMED"
-            },
+            where: { code },
             include: {
-                session: true
-            }
-        })
+                session: true,
+                user: { select: { id: true, name: true, email: true } },
+            },
+        });
 
         if (!booking) {
-            return res.status(404).json({ error: "Booking not found" });
+            return res.status(404).json({ error: "Invalid check-in code. No booking found with this code." });
+        }
+
+        if (booking.status === "ATTENDED") {
+            return res.status(409).json({
+                error: `This check-in code has already been used. ${booking.user?.name || "Member"} is already marked present.`,
+            });
+        }
+
+        if (booking.status === "CANCELLED") {
+            return res.status(400).json({
+                error: "This booking was cancelled and cannot be used for check-in.",
+            });
+        }
+
+        if (booking.status !== "CONFIRMED") {
+            return res.status(400).json({
+                error: `Cannot check in a booking with status ${booking.status.toLowerCase()}.`,
+            });
         }
 
         const now = new Date();
@@ -277,21 +293,27 @@ export const markAttendance = async (req: Request, res: Response) => {
 
         if (now <= sessionStart || now >= sessionEnd) {
             return res.status(400).json({
-                error: "Check-in is only allowed during the session's active hour."
+                error: "Check-in is only allowed during the session's active hour.",
             });
         }
 
         const updatedBooking = await prisma.booking.update({
             where: { id: booking.id },
             data: {
-                status: "ATTENDED"
-            }
-        })
-        return res.status(200).json({ message: "Attendance marked successfully", booking: updatedBooking });
+                status: "ATTENDED",
+            },
+            include: {
+                session: true,
+                user: { select: { id: true, name: true, email: true } },
+            },
+        });
+
+        return res.status(200).json({
+            message: `Attendance marked successfully for ${updatedBooking.user?.name || "member"}.`,
+            booking: updatedBooking,
+        });
     } catch (error) {
         console.error("Error marking attendance:", error);
         return res.status(500).json({ error: "Internal server error" });
-
     }
-
-}
+};

@@ -2,7 +2,14 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { sessionsApi, bookingsApi, type SessionItem, type BookingItem, ApiError } from "@/lib/api";
-import { Button } from "@/components/ui/button";
+import { GlowCard } from "@/components/fx/GlowCard";
+import { MagneticButton } from "@/components/fx/MagneticButton";
+import { CapacityRing } from "@/components/fx/CapacityRing";
+import { LivePulse } from "@/components/fx/LivePulse";
+import { Banner } from "@/components/fx/Banner";
+import { Skeleton } from "@/components/fx/Skeleton";
+import { RotateCw, Calendar, Clock, KeyRound, Ticket, Sparkles, AlertCircle, Copy, Check } from "lucide-react";
+import { motion } from "motion/react";
 
 export const SessionList = () => {
   const { user } = useAuth();
@@ -13,7 +20,20 @@ export const SessionList = () => {
   const [error, setError] = useState("");
   const [bookingInProgressId, setBookingInProgressId] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [copiedSessionId, setCopiedSessionId] = useState<number | null>(null);
 
+  const copyPasscode = (code: string, sessionId: number) => {
+    navigator.clipboard.writeText(code);
+    setCopiedSessionId(sessionId);
+    setTimeout(() => {
+      setCopiedSessionId(null);
+    }, 1500);
+  };
+
+  useEffect(() => {
+    document.title = "Workout Sessions · Gym Booking";
+  }, []);
 
   const loadData = async (quiet: boolean = false) => {
     if (!quiet) {
@@ -31,7 +51,6 @@ export const SessionList = () => {
 
       setSessions(fetchedSessions);
       setMyBookings(fetchedBookings);
-
     } catch (err: any) {
       if (!quiet) {
         if (err instanceof ApiError) {
@@ -51,6 +70,7 @@ export const SessionList = () => {
     loadData(false);
   }, []);
 
+  // 6-second live polling
   useEffect(() => {
     const timer = setInterval(() => {
       loadData(true);
@@ -69,6 +89,7 @@ export const SessionList = () => {
     setBookingInProgressId(session.id);
     setFeedback(null);
 
+    // Optimistic seats update
     setSessions((prev) =>
       prev.map((s) => {
         if (s.id === session.id) {
@@ -81,6 +102,7 @@ export const SessionList = () => {
       })
     );
 
+    // Optimistic booking entry
     const optimisticBooking: BookingItem = {
       id: Date.now(),
       createdAt: new Date().toISOString(),
@@ -126,218 +148,480 @@ export const SessionList = () => {
     }
   };
 
-  const formatDate = (isoString: string) => {
+  const formatSessionTime = (isoString: string) => {
     try {
       const date = new Date(isoString);
       return {
+        timeStr: date.toLocaleTimeString(undefined, {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
         dateStr: date.toLocaleDateString(undefined, {
           weekday: "short",
           month: "short",
           day: "numeric",
         }),
-        timeStr: date.toLocaleTimeString(undefined, {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
+        dayKey: date.toDateString(),
       };
     } catch {
-      return { dateStr: isoString, timeStr: "" };
+      return { timeStr: "", dateStr: isoString, dayKey: isoString };
     }
   };
 
-  return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 py-8 px-4 sm:px-6">
-      <div className="max-w-5xl mx-auto space-y-6">
-        <div className="border border-neutral-800 bg-neutral-900 rounded-lg p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-white">Workout Sessions</h1>
-            <p className="text-sm text-neutral-400 mt-1">
-              Select an upcoming session to reserve your spot (Max 20 participants).
-            </p>
-          </div>
+  const getDayLabel = (isoString: string) => {
+    try {
+      const date = new Date(isoString);
+      const today = new Date();
+      const tomorrow = new Date();
+      tomorrow.setDate(today.getDate() + 1);
 
-          <div className="flex items-center gap-3">
-            <Link to="/my-bookings">
-              <Button variant="outline" className="text-xs border-neutral-700 bg-neutral-800 text-white">
-                My Bookings ({myBookings.length})
-              </Button>
-            </Link>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => loadData(false)}
-              disabled={loading}
-              className="text-xs border-neutral-700 bg-neutral-800 text-neutral-300"
-            >
-              {loading ? "Refreshing..." : "Refresh"}
-            </Button>
+      if (date.toDateString() === today.toDateString()) {
+        return "TODAY";
+      } else if (date.toDateString() === tomorrow.toDateString()) {
+        return "TOMORROW";
+      } else {
+        return date
+          .toLocaleDateString(undefined, {
+            weekday: "short",
+            day: "numeric",
+            month: "short",
+          })
+          .toUpperCase();
+      }
+    } catch {
+      return "UPCOMING";
+    }
+  };
+
+  // Sort sessions: default is "asc" (closest / soonest session at the top)
+  const sortedSessions = [...sessions].sort((a, b) => {
+    const timeA = new Date(a.scheduledFor).getTime();
+    const timeB = new Date(b.scheduledFor).getTime();
+    return sortOrder === "asc" ? timeA - timeB : timeB - timeA;
+  });
+
+  // Group sorted sessions by day
+  const groupedSessions = sortedSessions.reduce((acc, session) => {
+    const key = new Date(session.scheduledFor).toDateString();
+    if (!acc[key]) {
+      acc[key] = {
+        label: getDayLabel(session.scheduledFor),
+        date: session.scheduledFor,
+        items: [],
+      };
+    }
+    acc[key].items.push(session);
+    return acc;
+  }, {} as Record<string, { label: string; date: string; items: SessionItem[] }>);
+
+  return (
+    <div className="w-full flex-1 max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+      {/* Header Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 sm:p-8 rounded-[24px] bg-[#0E0E13]/80 border border-white/[0.08] backdrop-blur-xl">
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2">
+            <LivePulse label="6S LIVE SYNC" />
+            <span className="text-[11px] font-mono text-neutral-400">
+              {sessions.length} upcoming slots
+            </span>
           </div>
+          <h1 className="text-2xl sm:text-3xl font-black font-display text-white uppercase tracking-tight">
+            Workout Sessions
+          </h1>
+          <p className="text-xs sm:text-sm text-neutral-400">
+            Coach-led high-intensity training with real-time seat availability
+          </p>
         </div>
 
-        {feedback && (
-          <div
-            role="alert"
-            className={`p-4 rounded-md border text-sm flex items-start justify-between gap-2 ${feedback.type === "success"
-                ? "bg-emerald-950/60 border-emerald-800 text-emerald-200"
-                : "bg-red-950/60 border-red-800 text-red-200"
-              }`}
+        <div className="flex items-center gap-3 shrink-0">
+          <Link to="/my-bookings" id="sessions-my-bookings-link">
+            <MagneticButton variant="ghost" size="sm" className="flex items-center gap-2">
+              <Ticket className="w-3.5 h-3.5 text-[#C8FF2E]" />
+              <span>My Bookings ({myBookings.length})</span>
+            </MagneticButton>
+          </Link>
+
+          <MagneticButton
+            variant="ghost"
+            size="sm"
+            onClick={() => loadData(false)}
+            disabled={loading}
+            id="sessions-refresh-button"
+            className="flex items-center gap-2 text-neutral-300"
           >
-            <div>
-              <strong>{feedback.type === "success" ? "Success: " : "Notice: "}</strong>
-              <span>{feedback.text}</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setFeedback(null)}
-              className="text-xs underline hover:opacity-80"
-            >
-              Dismiss
-            </button>
-          </div>
-        )}
-
-        {loading && sessions.length === 0 && (
-          <div className="text-center py-12 border border-neutral-800 bg-neutral-900 rounded-lg">
-            <p className="text-sm text-neutral-400">Loading available sessions...</p>
-          </div>
-        )}
-
-        {error && (
-          <div
-            role="alert"
-            className="p-6 rounded-lg border border-red-800 bg-red-950/30 text-center space-y-3"
-          >
-            <p className="text-sm text-red-300 font-semibold">{error}</p>
-            <Button
-              onClick={() => loadData(false)}
-              className="bg-white text-black hover:bg-neutral-200 text-xs font-semibold"
-            >
-              Try Again
-            </Button>
-          </div>
-        )}
-
-        {!loading && !error && sessions.length === 0 && (
-          <div className="text-center py-12 border border-dashed border-neutral-800 bg-neutral-900/50 rounded-lg space-y-3">
-            <h2 className="text-base font-semibold text-white">No upcoming sessions found</h2>
-            <p className="text-xs text-neutral-400">Check back later or refresh to check for new slots.</p>
-            <Button
-              variant="outline"
-              onClick={() => loadData(false)}
-              className="text-xs border-neutral-700 text-neutral-300"
-            >
-              Check Again
-            </Button>
-          </div>
-        )}
-
-        {!loading && !error && sessions.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {sessions.map((session) => {
-              const { dateStr, timeStr } = formatDate(session.scheduledFor);
-              const isFull = session.seatsRemaining <= 0;
-              const isBookingThis = bookingInProgressId === session.id;
-
-              const userBooking = myBookings.find(
-                (b) => b.sessionId === session.id && (b.status === "CONFIRMED" || b.status === "WAITING_LIST")
-              );
-              const isConfirmed = userBooking?.status === "CONFIRMED";
-              const isWaitlisted = userBooking?.status === "WAITING_LIST";
-
-              return (
-                <div
-                  key={session.id}
-                  className={`border rounded-lg p-5 flex flex-col justify-between bg-neutral-900 space-y-4 ${isConfirmed
-                      ? "border-emerald-700 bg-emerald-950/20"
-                      : isWaitlisted
-                        ? "border-amber-700 bg-amber-950/20"
-                        : "border-neutral-800"
-                    }`}
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-neutral-400">{dateStr}</span>
-                      {isConfirmed ? (
-                        <span className="px-2 py-0.5 rounded bg-emerald-900/60 text-emerald-300 border border-emerald-700 font-medium">
-                          ✓ Booked
-                        </span>
-                      ) : isWaitlisted ? (
-                        <span className="px-2 py-0.5 rounded bg-amber-900/60 text-amber-300 border border-amber-700 font-medium">
-                          On Waitlist
-                        </span>
-                      ) : isFull ? (
-                        <span className="px-2 py-0.5 rounded bg-neutral-800 text-amber-400 font-medium">
-                          Full (Waitlist)
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded bg-neutral-800 text-neutral-300 font-medium">
-                          {session.seatsRemaining} spots left
-                        </span>
-                      )}
-                    </div>
-
-                    <div>
-                      <div className="text-xl font-bold text-white">{timeStr}</div>
-                      <p className="text-xs text-neutral-400 mt-0.5">Session #{session.id} • 60 Mins</p>
-                    </div>
-
-                    <div className="text-xs text-neutral-400 pt-1">
-                      <span>Capacity: </span>
-                      <strong className="text-white">
-                        {session.capacity - session.seatsRemaining} / {session.capacity}
-                      </strong>
-                    </div>
-
-                    {!user?.isAdmin && isConfirmed && userBooking?.code && (
-                      <div className="pt-2 border-t border-emerald-800/40 text-xs">
-                        <span className="text-emerald-400 font-semibold block">Your Passcode:</span>
-                        <span className="font-mono text-base font-bold text-white tracking-wider">
-                          {userBooking.code}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="pt-2">
-                    {isConfirmed ? (
-                      <Button
-                        disabled
-                        variant="outline"
-                        className="w-full text-xs text-emerald-400 border-emerald-800 bg-emerald-950/30 cursor-not-allowed"
-                      >
-                        Reserved ✓
-                      </Button>
-                    ) : isWaitlisted ? (
-                      <Button
-                        disabled
-                        variant="outline"
-                        className="w-full text-xs text-amber-400 border-amber-800 bg-amber-950/30 cursor-not-allowed"
-                      >
-                        Waitlist Active
-                      </Button>
-                    ) : (
-                      <Button
-                        onClick={() => handleBook(session)}
-                        disabled={isBookingThis}
-                        className={`w-full text-xs font-semibold ${isFull
-                            ? "bg-neutral-800 text-amber-300 hover:bg-neutral-700 border border-neutral-700"
-                            : "bg-white text-black hover:bg-neutral-200"
-                          }`}
-                      >
-                        {isBookingThis
-                          ? "Booking..."
-                          : isFull
-                            ? "Join Waiting List"
-                            : "Book Spot"}
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+            <RotateCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-[#C8FF2E]" : ""}`} />
+            <span>{loading ? "Refreshing..." : "Refresh"}</span>
+          </MagneticButton>
+        </div>
       </div>
+
+      {/* Global Feedback Banner */}
+      {feedback && (
+        <Banner
+          type={feedback.type}
+          text={feedback.text}
+          onDismiss={() => setFeedback(null)}
+        />
+      )}
+
+      {/* Sessions Sorting Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] pb-4">
+        <span className="text-xs text-neutral-400 font-medium">
+          Showing <strong className="text-white font-bold">{sessions.length}</strong> workout sessions
+        </span>
+
+        <div className="flex items-center gap-1.5 p-1 rounded-full bg-[#15151C] border border-white/[0.06]">
+          <span className="text-[11px] font-medium text-neutral-500 pl-2 pr-1 hidden sm:inline">Sort:</span>
+          <button
+            type="button"
+            id="session-sort-asc"
+            onClick={() => setSortOrder("asc")}
+            className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
+              sortOrder === "asc"
+                ? "bg-[#C8FF2E] text-[#07070A] shadow-[0_0_12px_rgba(200,255,46,0.35)]"
+                : "text-neutral-400 hover:text-white"
+            }`}
+          >
+            Soonest First
+          </button>
+          <button
+            type="button"
+            id="session-sort-desc"
+            onClick={() => setSortOrder("desc")}
+            className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
+              sortOrder === "desc"
+                ? "bg-[#C8FF2E] text-[#07070A] shadow-[0_0_12px_rgba(200,255,46,0.35)]"
+                : "text-neutral-400 hover:text-white"
+            }`}
+          >
+            Furthest Away
+          </button>
+        </div>
+      </div>
+
+      {/* Loading Skeletons */}
+      {loading && sessions.length === 0 && (
+        <div className="space-y-6">
+          <div className="h-4 w-32 bg-white/[0.05] rounded animate-pulse" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div
+                key={i}
+                className="p-6 rounded-[22px] bg-[#0E0E13] border border-white/[0.06] space-y-4"
+              >
+                <div className="flex justify-between items-start">
+                  <div className="space-y-2">
+                    <Skeleton className="h-8 w-28" />
+                    <Skeleton className="h-4 w-36" />
+                  </div>
+                  <Skeleton className="h-14 w-14 rounded-full" />
+                </div>
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-11 w-full rounded-full" />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <GlowCard className="p-8 text-center space-y-4 border-[#FF5A1F]/30 bg-[#FF5A1F]/5 max-w-lg mx-auto">
+          <div className="w-12 h-12 rounded-2xl bg-[#FF5A1F]/20 text-[#FF5A1F] flex items-center justify-center mx-auto">
+            <AlertCircle className="w-6 h-6" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-lg font-bold text-white">Connection Error</h3>
+            <p className="text-xs text-neutral-400">{error}</p>
+          </div>
+          <MagneticButton
+            variant="volt"
+            size="md"
+            onClick={() => loadData(false)}
+            id="sessions-retry-button"
+            className="mx-auto"
+          >
+            Try Again
+          </MagneticButton>
+        </GlowCard>
+      )}
+
+      {/* Empty State */}
+      {!loading && !error && sessions.length === 0 && (
+        <GlowCard className="p-12 text-center space-y-4 max-w-lg mx-auto border-dashed border-white/10">
+          <div className="w-14 h-14 rounded-2xl bg-white/[0.04] text-neutral-400 flex items-center justify-center mx-auto">
+            <Calendar className="w-7 h-7" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-lg font-bold text-white font-display uppercase tracking-tight">
+              No Upcoming Sessions
+            </h3>
+            <p className="text-xs text-neutral-400 max-w-sm mx-auto">
+              There are currently no active workout sessions scheduled. Check back shortly or refresh to check for openings.
+            </p>
+          </div>
+          <MagneticButton
+            variant="ghost"
+            size="sm"
+            onClick={() => loadData(false)}
+            className="mx-auto"
+          >
+            Check Again
+          </MagneticButton>
+        </GlowCard>
+      )}
+
+      {/* Sessions Grouped by Day */}
+      {!loading && !error && Object.keys(groupedSessions).length > 0 && (
+        <div className="space-y-10">
+          {Object.entries(groupedSessions).map(([dayKey, group]) => (
+            <section key={dayKey} className="space-y-4">
+              {/* Day Header Badge */}
+              <div className="flex items-center gap-3">
+                <span className="inline-block w-2 h-2 rounded-full bg-[#C8FF2E]" />
+                <h2 className="text-sm font-black font-display tracking-widest text-white uppercase">
+                  {group.label}
+                </h2>
+                <div className="h-px flex-1 bg-gradient-to-r from-white/[0.1] to-transparent" />
+              </div>
+
+              {/* Cards Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {group.items.map((session) => {
+                  const { timeStr, dateStr } = formatSessionTime(session.scheduledFor);
+                  const isFull = session.seatsRemaining <= 0;
+                  const isUrgent = session.seatsRemaining > 0 && session.seatsRemaining <= 3;
+                  const isBookingThis = bookingInProgressId === session.id;
+
+                  const userBooking = myBookings.find(
+                    (b) =>
+                      b.sessionId === session.id &&
+                      (b.status === "CONFIRMED" || b.status === "WAITING_LIST")
+                  );
+                  const isConfirmed = userBooking?.status === "CONFIRMED";
+                  const isWaitlisted = userBooking?.status === "WAITING_LIST";
+
+                  const bookedCount = Math.max(0, session.capacity - session.seatsRemaining);
+                  const progressPercentage = Math.min(
+                    100,
+                    Math.round((bookedCount / session.capacity) * 100)
+                  );
+
+                  return (
+                    <motion.div
+                      key={session.id}
+                      layout
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.35, ease: "easeOut" }}
+                      className="h-full"
+                    >
+                      <GlowCard
+                        className={`relative flex flex-col justify-between p-6 transition-all duration-300 h-full ${
+                          isConfirmed
+                            ? "border-[#C8FF2E]/60 bg-[#C8FF2E]/[0.03] shadow-[0_0_28px_-6px_rgba(200,255,46,0.25)]"
+                            : isWaitlisted
+                            ? "border-[#FFB020]/50 bg-[#FFB020]/[0.03] shadow-[0_0_28px_-6px_rgba(255,176,32,0.2)]"
+                            : isFull
+                            ? "border-[#FF5A1F]/30 bg-[#FF5A1F]/[0.02]"
+                            : "border-white/[0.08]"
+                        }`}
+                      >
+                        {/* Top Ribbon for User Status */}
+                        {isConfirmed && (
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.7, y: -4 }}
+                            animate={{ opacity: 1, scale: [1, 1.15, 1], y: 0 }}
+                            transition={{ duration: 0.5, ease: "easeOut" }}
+                            className="absolute top-4 right-4 z-20 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#C8FF2E] text-[#07070A] text-[10px] font-black tracking-wider uppercase shadow-[0_0_16px_rgba(200,255,46,0.7)]"
+                          >
+                            <Sparkles className="w-3 h-3 fill-current" />
+                            <span>You&apos;re In ✓</span>
+                          </motion.div>
+                        )}
+
+                        {isWaitlisted && (
+                          <div className="absolute top-4 right-4 z-20 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#FFB020] text-[#07070A] text-[10px] font-black tracking-wider uppercase">
+                            <Clock className="w-3 h-3" />
+                            <span>On Waitlist</span>
+                          </div>
+                        )}
+
+                      <div className="space-y-4">
+                        {/* Time & Capacity Ring Header */}
+                        <div className="flex items-start justify-between gap-3 pt-1">
+                          <div className="space-y-1">
+                            <span className="text-neutral-400 text-xs font-medium flex items-center gap-1.5">
+                              <Calendar className="w-3.5 h-3.5 text-neutral-500" />
+                              {dateStr}
+                            </span>
+                            <div className="font-mono text-3xl font-black text-white tracking-tight tabular-nums">
+                              {timeStr}
+                            </div>
+                            <span className="text-[11px] text-neutral-500 font-mono">
+                              Session #{session.id} · 60 MIN
+                            </span>
+                          </div>
+
+                          <div className="pt-1">
+                            <CapacityRing
+                              capacity={session.capacity}
+                              seatsRemaining={session.seatsRemaining}
+                              size={58}
+                              strokeWidth={4.5}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Urgency Pill if ≤3 spots left */}
+                        {isUrgent && !isConfirmed && !isWaitlisted && (
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#FF5A1F]/15 border border-[#FF5A1F]/30 text-[#FF5A1F] text-xs font-bold animate-pulse">
+                            <span>⚡</span>
+                            <span>Only {session.seatsRemaining} spot{session.seatsRemaining > 1 ? "s" : ""} left</span>
+                          </div>
+                        )}
+
+                        {/* Thin Capacity Bar */}
+                        <div className="space-y-1.5 pt-1">
+                          <div className="flex justify-between text-[11px] text-neutral-400">
+                            <span>Capacity</span>
+                            <span className="font-mono font-medium text-white">
+                              {bookedCount} / {session.capacity} booked
+                            </span>
+                          </div>
+                          <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ${
+                                isFull
+                                  ? "bg-[#FF5A1F]"
+                                  : isUrgent
+                                  ? "bg-[#FF5A1F]"
+                                  : progressPercentage > 75
+                                  ? "bg-[#FFB020]"
+                                  : "bg-[#C8FF2E]"
+                              }`}
+                              style={{ width: `${progressPercentage}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Passcode Panel (Member Confirmed Booking only) */}
+                        {!user?.isAdmin && isConfirmed && userBooking?.code && (
+                          <div className="p-3.5 rounded-xl bg-black/60 border border-[#C8FF2E]/30 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-bold tracking-wider uppercase text-[#C8FF2E] flex items-center gap-1">
+                                <KeyRound className="w-3 h-3" />
+                                <span>Check-In Passcode</span>
+                              </span>
+
+                              {userBooking.code !== "PENDING" && (
+                                <button
+                                  type="button"
+                                  onClick={() => copyPasscode(userBooking.code!, session.id)}
+                                  className="inline-flex items-center gap-1 text-[11px] font-medium text-neutral-300 hover:text-white px-2 py-0.5 rounded-md bg-white/[0.06] hover:bg-white/15 transition-colors cursor-pointer"
+                                  title="Copy passcode"
+                                  aria-label="Copy passcode"
+                                >
+                                  {copiedSessionId === session.id ? (
+                                    <>
+                                      <Check className="w-3 h-3 text-[#C8FF2E]" />
+                                      <span className="text-[#C8FF2E] font-bold">Copied!</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Copy className="w-3 h-3 text-neutral-400" />
+                                      <span>Copy</span>
+                                    </>
+                                  )}
+                                </button>
+                              )}
+                            </div>
+
+                            {userBooking.code === "PENDING" ? (
+                              <div className="flex items-center gap-2 py-1">
+                                <div className="h-6 w-32 bg-white/10 rounded animate-shimmer" />
+                                <span className="text-xs text-neutral-400 italic">Generating code...</span>
+                              </div>
+                            ) : (
+                              <motion.div
+                                animate={copiedSessionId === session.id ? { scale: [1, 1.05, 1] } : { scale: 1 }}
+                                transition={{ duration: 0.3 }}
+                                className="flex items-center gap-1.5 py-1"
+                              >
+                                {userBooking.code.split("").map((char, index) => (
+                                  <span
+                                    key={index}
+                                    className={`inline-flex items-center justify-center w-7 h-8 rounded-lg bg-[#15151C] border font-mono text-base font-black transition-colors ${
+                                      copiedSessionId === session.id
+                                        ? "border-[#C8FF2E] text-[#C8FF2E] shadow-[0_0_12px_rgba(200,255,46,0.4)]"
+                                        : "border-[#C8FF2E]/30 text-white"
+                                    }`}
+                                  >
+                                    {char}
+                                  </span>
+                                ))}
+                              </motion.div>
+                            )}
+
+                            <p className="text-[11px] text-neutral-400">
+                              Show this code at check-in
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Card Action Button */}
+                      <div className="pt-6">
+                        {isConfirmed ? (
+                          <button
+                            type="button"
+                            disabled
+                            className="w-full h-11 rounded-full bg-[#C8FF2E]/10 border border-[#C8FF2E]/30 text-[#C8FF2E] font-bold text-xs uppercase tracking-wider cursor-default flex items-center justify-center gap-1.5"
+                          >
+                            <span>Reserved Spot ✓</span>
+                          </button>
+                        ) : isWaitlisted ? (
+                          <button
+                            type="button"
+                            disabled
+                            className="w-full h-11 rounded-full bg-[#FFB020]/10 border border-[#FFB020]/30 text-[#FFB020] font-bold text-xs uppercase tracking-wider cursor-default flex items-center justify-center gap-1.5"
+                          >
+                            <span>Waitlist Active</span>
+                          </button>
+                        ) : (
+                          <MagneticButton
+                            variant={isFull ? "ghost" : "volt"}
+                            size="md"
+                            disabled={isBookingThis}
+                            onClick={() => handleBook(session)}
+                            className="w-full flex items-center justify-center font-bold"
+                          >
+                            {isBookingThis ? (
+                              <span className="flex items-center gap-2">
+                                <motion.span
+                                  animate={{ rotate: 360 }}
+                                  transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                                  className="inline-block w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full"
+                                />
+                                Booking...
+                              </span>
+                            ) : isFull ? (
+                              <span className="text-[#FFB020]">Join Waiting List</span>
+                            ) : (
+                              <span>Book Spot</span>
+                            )}
+                          </MagneticButton>
+                        )}
+                      </div>
+                    </GlowCard>
+                  </motion.div>
+                );
+                })}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

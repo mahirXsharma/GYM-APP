@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { Button } from "@/components/ui/button";
+import { Dumbbell, LogOut, Menu, X, ShieldAlert } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
 
 export const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
@@ -16,157 +17,245 @@ export const Navbar = () => {
 
   const isActive = (path: string) => location.pathname === path;
 
+  const getInitials = (name?: string) => {
+    if (!name) return "U";
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
   return (
-    <nav className="border-b border-neutral-800 bg-neutral-900 text-white sticky top-0 z-40">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-        <Link to="/" className="text-lg font-bold tracking-tight text-white flex items-center gap-2">
-          <span className="bg-white text-black text-xs font-black px-2 py-1 rounded">GYM</span>
-          <span>Gym Booking</span>
+    <header className="sticky top-3 z-50 px-4 sm:px-6 w-full flex justify-center">
+      <nav className="w-full max-w-5xl rounded-full bg-[#0E0E13]/80 backdrop-blur-xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.5)] px-4 sm:px-6 h-14 flex items-center justify-between transition-all">
+        {/* Brand Logo */}
+        <Link
+          to="/"
+          id="nav-brand-logo"
+          className="flex items-center gap-2.5 group select-none"
+        >
+          <div className="w-8 h-8 rounded-xl bg-[#C8FF2E] flex items-center justify-center text-[#07070A] shadow-[0_0_16px_rgba(200,255,46,0.4)] group-hover:scale-105 transition-transform duration-200">
+            <Dumbbell className="w-4 h-4 stroke-[2.5]" />
+          </div>
+          <span className="font-display font-black text-sm tracking-tight text-white uppercase group-hover:text-[#C8FF2E] transition-colors">
+            Gym Booking
+          </span>
         </Link>
 
-        <div className="hidden md:flex items-center gap-6 text-sm">
+        {/* Desktop Navigation */}
+        <div className="hidden md:flex items-center gap-1 text-xs">
           {isAuthenticated ? (
             <>
               <Link
                 to="/sessions"
-                className={`transition-colors ${
+                id="nav-link-sessions"
+                className={`relative px-3.5 py-1.5 rounded-full font-medium transition-colors ${
                   isActive("/sessions")
-                    ? "text-white font-semibold underline underline-offset-4"
+                    ? "text-[#07070A] font-bold"
                     : "text-neutral-400 hover:text-white"
                 }`}
               >
+                {isActive("/sessions") && (
+                  <motion.div
+                    layoutId="active-pill"
+                    className="absolute inset-0 bg-[#C8FF2E] rounded-full -z-10 shadow-[0_0_16px_rgba(200,255,46,0.35)]"
+                    transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                  />
+                )}
                 Sessions
               </Link>
 
               <Link
                 to="/my-bookings"
-                className={`transition-colors ${isActive("/my-bookings")
-                    ? "text-white font-semibold underline underline-offset-4"
+                id="nav-link-my-bookings"
+                className={`relative px-3.5 py-1.5 rounded-full font-medium transition-colors ${
+                  isActive("/my-bookings")
+                    ? "text-[#07070A] font-bold"
                     : "text-neutral-400 hover:text-white"
-                  }`}
+                }`}
               >
+                {isActive("/my-bookings") && (
+                  <motion.div
+                    layoutId="active-pill"
+                    className="absolute inset-0 bg-[#C8FF2E] rounded-full -z-10 shadow-[0_0_16px_rgba(200,255,46,0.35)]"
+                    transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                  />
+                )}
                 My Bookings
               </Link>
 
               {user?.isAdmin && (
                 <Link
                   to="/admin"
-                  className={`px-2.5 py-1 rounded text-xs font-semibold ${isActive("/admin")
-                      ? "bg-amber-500 text-black font-bold"
-                      : "bg-neutral-800 text-amber-400 hover:bg-neutral-700"
-                    }`}
+                  id="nav-link-admin"
+                  className={`relative px-3.5 py-1.5 rounded-full font-medium transition-colors ${
+                    isActive("/admin")
+                      ? "text-[#07070A] font-bold bg-[#FF5A1F]"
+                      : "text-[#FF5A1F] border border-[#FF5A1F]/30 hover:bg-[#FF5A1F]/10"
+                  }`}
                 >
-                  Admin Page
+                  <span className="flex items-center gap-1.5">
+                    <ShieldAlert className="w-3 h-3" />
+                    Admin
+                  </span>
                 </Link>
               )}
 
-              <div className="flex items-center gap-3 pl-4 border-l border-neutral-800">
-                <span className="text-xs text-neutral-400">
-                  Hi, <strong className="text-white">{user?.name}</strong>
-                  {user?.isAdmin && <span className="ml-1 text-[10px] text-amber-400">(Admin)</span>}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleLogout}
-                  className="text-xs border-neutral-700 bg-neutral-800 text-neutral-200 hover:bg-neutral-700 hover:text-white"
+              {/* User Profile Info & Logout */}
+              <div className="flex items-center gap-2.5 pl-3 ml-2 border-l border-white/10">
+                <div
+                  className="w-7 h-7 rounded-full bg-[#15151C] border border-white/10 flex items-center justify-center font-mono font-bold text-[10px] text-white"
+                  title={`${user?.name} (${user?.email})`}
                 >
-                  Logout
-                </Button>
+                  {getInitials(user?.name)}
+                </div>
+
+                <div className="flex flex-col text-left">
+                  <span className="text-[11px] font-semibold text-white leading-tight max-w-[120px] truncate">
+                    {user?.name}
+                  </span>
+                  {user?.isAdmin && (
+                    <span className="text-[9px] font-mono text-[#FF5A1F] uppercase font-bold">
+                      Admin
+                    </span>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  id="nav-logout-btn"
+                  onClick={handleLogout}
+                  className="p-1.5 rounded-full text-neutral-400 hover:text-[#FF5A1F] hover:bg-white/[0.05] transition-colors"
+                  title="Logout"
+                  aria-label="Logout"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
               </div>
             </>
           ) : (
-            <div className="flex items-center gap-3">
-              <Link to="/login">
-                <Button variant="ghost" size="sm" className="text-neutral-300 hover:!bg-white hover:!text-black transition-colors">
+            <div className="flex items-center gap-2">
+              <Link to="/login" id="nav-login-btn">
+                <button
+                  type="button"
+                  className="px-4 py-1.5 text-xs text-neutral-300 hover:text-white font-medium transition-colors"
+                >
                   Sign In
-                </Button>
+                </button>
               </Link>
-              <Link to="/register">
-                <Button size="sm" className="bg-white text-black hover:bg-neutral-200 font-semibold">
+              <Link to="/register" id="nav-register-btn">
+                <button
+                  type="button"
+                  className="px-4 py-1.5 text-xs font-bold bg-[#C8FF2E] text-[#07070A] rounded-full hover:bg-[#d6ff5c] shadow-[0_0_16px_rgba(200,255,46,0.35)] transition-all"
+                >
                   Register
-                </Button>
+                </button>
               </Link>
             </div>
           )}
         </div>
 
+        {/* Mobile Hamburger Toggle */}
         <button
           type="button"
+          id="nav-mobile-toggle"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="md:hidden p-2 text-neutral-400 hover:text-white"
-          aria-label="Toggle navigation"
+          className="md:hidden p-2 rounded-full text-neutral-400 hover:text-white hover:bg-white/5 transition-colors"
+          aria-label="Toggle mobile menu"
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            {mobileMenuOpen ? (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            ) : (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            )}
-          </svg>
+          {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
-      </div>
+      </nav>
 
-      {mobileMenuOpen && (
-        <div className="md:hidden border-t border-neutral-800 bg-neutral-900 px-4 py-3 space-y-2">
-          {isAuthenticated ? (
-            <>
-              <Link
-                to="/sessions"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block py-1.5 text-sm text-neutral-300 hover:text-white"
-              >
-                Sessions
-              </Link>
-              <Link
-                to="/my-bookings"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block py-1.5 text-sm text-neutral-300 hover:text-white"
-              >
-                My Bookings
-              </Link>
-              {user?.isAdmin && (
+      {/* Mobile Drawer Overlay */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="md:hidden fixed inset-x-4 top-20 rounded-2xl bg-[#0E0E13]/95 backdrop-blur-2xl border border-white/10 p-5 space-y-4 shadow-[0_16px_40px_rgba(0,0,0,0.8)] z-50"
+          >
+            {isAuthenticated ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-3 pb-3 border-b border-white/10">
+                  <div className="w-9 h-9 rounded-full bg-[#15151C] border border-white/10 flex items-center justify-center font-mono font-bold text-xs text-white">
+                    {getInitials(user?.name)}
+                  </div>
+                  <div>
+                    <div className="text-sm font-bold text-white">{user?.name}</div>
+                    <div className="text-xs text-neutral-400">{user?.email}</div>
+                  </div>
+                  {user?.isAdmin && (
+                    <span className="ml-auto px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#FF5A1F]/20 text-[#FF5A1F] border border-[#FF5A1F]/30">
+                      ADMIN
+                    </span>
+                  )}
+                </div>
+
                 <Link
-                  to="/admin"
+                  to="/sessions"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block py-1.5 text-sm font-semibold text-amber-400 hover:text-amber-300"
+                  className="block py-2 text-sm font-semibold text-neutral-300 hover:text-[#C8FF2E]"
                 >
-                  Admin Page
+                  Workout Sessions
                 </Link>
-              )}
-              <div className="pt-2 border-t border-neutral-800 flex items-center justify-between">
-                <span className="text-xs text-neutral-400">
-                  Signed in as <strong className="text-white">{user?.name}</strong>
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    handleLogout();
-                  }}
-                  className="text-xs text-red-400 border-neutral-700 bg-neutral-800"
+                <Link
+                  to="/my-bookings"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block py-2 text-sm font-semibold text-neutral-300 hover:text-[#C8FF2E]"
                 >
-                  Logout
-                </Button>
+                  My Bookings
+                </Link>
+                {user?.isAdmin && (
+                  <Link
+                    to="/admin"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block py-2 text-sm font-bold text-[#FF5A1F]"
+                  >
+                    Admin Control Center
+                  </Link>
+                )}
+
+                <div className="pt-3 border-t border-white/10 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      handleLogout();
+                    }}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold text-[#FF5A1F] bg-[#FF5A1F]/10 border border-[#FF5A1F]/20 hover:bg-[#FF5A1F]/20"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    Sign Out
+                  </button>
+                </div>
               </div>
-            </>
-          ) : (
-            <div className="grid grid-cols-2 gap-2 pt-1">
-              <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
-                <Button variant="outline" size="sm" className="w-full bg-white text-black hover:bg-neutral-200 border-neutral-700 font-semibold">
-                  Sign In
-                </Button>
-              </Link>
-              <Link to="/register" onClick={() => setMobileMenuOpen(false)}>
-                <Button size="sm" className="w-full bg-white text-black font-semibold">
-                  Register
-                </Button>
-              </Link>
-            </div>
-          )}
-        </div>
-      )}
-    </nav>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
+                  <button
+                    type="button"
+                    className="w-full py-2.5 rounded-full border border-white/10 text-xs font-semibold text-white hover:bg-white/5"
+                  >
+                    Sign In
+                  </button>
+                </Link>
+                <Link to="/register" onClick={() => setMobileMenuOpen(false)}>
+                  <button
+                    type="button"
+                    className="w-full py-2.5 rounded-full bg-[#C8FF2E] text-[#07070A] text-xs font-bold hover:bg-[#d4ff4e]"
+                  >
+                    Register
+                  </button>
+                </Link>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </header>
   );
 };
